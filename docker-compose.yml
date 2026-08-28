@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  music-pipeline:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: suno-music-pipeline
+    ports:
+      - "8000:8000"
+    environment:
+      - SOUNDFONT_PATH=/app/FluidR3_GM.sf2
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./logs:/app/logs
+      - ./uploads:/app/uploads
+      - ./config.json:/app/config.json:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    networks:
+      - music-network
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  # Optional: Nginx reverse proxy
+  nginx:
+    image: nginx:alpine
+    container_name: suno-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - music-pipeline
+    networks:
+      - music-network
+    restart: unless-stopped
+
+networks:
+  music-network:
+    driver: bridge
+
+volumes:
+  logs:
+  uploads:

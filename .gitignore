@@ -1,0 +1,42 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# SoundFont (large file)
+FluidR3_GM.sf2
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+/tmp/
+/temp/
+uploads/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment variables
+.env
+.env.local
+
+# Model files (large)
+*.pt
+*.pth
+*.pkl
+
+# OS
+.DS_Store
+Thumbs.db
