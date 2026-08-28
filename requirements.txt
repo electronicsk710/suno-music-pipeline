@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+python-multipart
+basic-pitch
+librosa
+midiutil
+midi2audio
+pydub
+numpy
+torch
+scikit-learn

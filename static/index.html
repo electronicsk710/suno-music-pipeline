@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AI Music Generator</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 600px; margin: 40px auto; padding: 0 20px; }
+    .card { border: 1px solid #ccc; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+    button { background: #0066cc; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; margin-right: 5px; }
+    button:disabled { background: #999; }
+    button.rec-active { background: #cc0000; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    #status { font-weight: bold; margin-top: 10px; color: #444; }
+    .divider { margin: 15px 0; border-bottom: 1px dashed #ddd; }
+    input[type=number] { width: 80px; }
+  </style>
+</head>
+<body>
+  <h1>Suno-style Music Pipeline</h1>
+
+  <div class="card">
+    <h3>Step 1: Record or Upload Vocal Melody</h3>
+    
+    <div>
+      <button id="recordBtn" onclick="toggleRecording()">Start Recording</button>
+      <audio id="vocalPreview" controls style="display:none; vertical-align: middle; margin-top: 10px;"></audio>
+    </div>
+
+    <div class="divider"></div>
+
+    <div>
+      <input type="file" id="audioInput" accept="audio/*">
+    </div>
+
+    <div style="margin-top: 15px;">
+      <button onclick="analyzeAudio()">Analyze Track</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Step 2: Generation Settings</h3>
+    <p>Tempo: <span id="tempoVal">--</span> BPM
+       <label style="margin-left:20px;">Override: <input type="number" id="tempoOverride" min="60" max="180" step="1"></label>
+    </p>
+    <p>Key: <span id="keyVal">--</span></p>
+    <button id="genBtn" onclick="generateTrack()" disabled>Generate Instrumental</button>
+  </div>
+
+  <div class="card">
+    <h3>Step 3: Output Player</h3>
+    <audio id="player" controls></audio>
+    <p id="status"></p>
+  </div>
+
+  <script>
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let recordedAudioBlob = null;
+    let currentAnalysis = null;
+
+    async function toggleRecording() {
+      const btn = document.getElementById('recordBtn');
+      if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          mediaRecorder = new MediaRecorder(stream);
+          audioChunks = [];
+          mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+          mediaRecorder.onstop = () => {
+            recordedAudioBlob = new Blob(audioChunks, { type: 'audio/webm' });  // WebM/Opus
+            const preview = document.getElementById('vocalPreview');
+            preview.src = URL.createObjectURL(recordedAudioBlob);
+            preview.style.display = 'inline-block';
+          };
+          mediaRecorder.start();
+          btn.innerText = 'Stop Recording';
+          btn.classList.add('rec-active');
+        } catch (err) {
+          alert("Microphone access denied or unsupported.");
+          console.error(err);
+        }
+      } else {
+        mediaRecorder.stop();
+        mediaRecorder.stream.getTracks().forEach(track => track.stop());
+        btn.innerText = 'Record Again';
+        btn.classList.remove('rec-active');
+      }
+    }
+
+    async function analyzeAudio() {
+      const fileInput = document.getElementById('audioInput');
+      const status = document.getElementById('status');
+      const formData = new FormData();
+
+      if (recordedAudioBlob) {
+        formData.append('file', recordedAudioBlob, 'mic_vocal.webm');
+      } else if (fileInput.files[0]) {
+        formData.append('file', fileInput.files[0]);
+      } else {
+        return alert("Please record audio with your mic or select an audio file first.");
+      }
+
+      status.innerText = "Analyzing pitch, key, and tempo...";
+      try {
+        const resp = await fetch('/analyze', { method: 'POST', body: formData });
+        if (!resp.ok) throw new Error(await resp.text());
+        currentAnalysis = await resp.json();
+        document.getElementById('tempoVal').innerText = Math.round(currentAnalysis.tempo);
+        document.getElementById('keyVal').innerText = currentAnalysis.key;
+        document.getElementById('genBtn').disabled = false;
+        status.innerText = "Analysis complete. Ready to generate!";
+      } catch (err) {
+        status.innerText = "Error analyzing file.";
+        console.error(err);
+      }
+    }
+
+    async function generateTrack() {
+      if (!currentAnalysis) return;
+      const status = document.getElementById('status');
+      status.innerText = "Harmonizing and rendering MIDI audio...";
+
+      // Apply tempo override if provided
+      const tempoOverride = document.getElementById('tempoOverride').value;
+      const tempo = tempoOverride ? parseFloat(tempoOverride) : currentAnalysis.tempo;
+
+      try {
+        const resp = await fetch('/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            notes: currentAnalysis.notes,
+            tempo: tempo,
+            key: currentAnalysis.key
+          })
+        });
+        if (!resp.ok) throw new Error(await resp.text());
+        const blob = await resp.blob();
+        const player = document.getElementById('player');
+        player.src = URL.createObjectURL(blob);
+        player.play();
+        status.innerText = "Generation complete!";
+      } catch (err) {
+        status.innerText = "Error generating audio track.";
+        console.error(err);
+      }
+    }
+  </script>
+</body>
+</html>
