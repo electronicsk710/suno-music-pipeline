@@ -1,0 +1,43 @@
+{
+  "audio": {
+    "sample_rate": 22050,
+    "mono": true,
+    "min_frequency": 80,
+    "max_frequency": 1000,
+    "minimum_note_length": 0.05
+  },
+  "pitch_detection": {
+    "onset_threshold": 0.5,
+    "frame_threshold": 0.3
+  },
+  "tempo": {
+    "default_bpm": 120,
+    "min_bpm": 60,
+    "max_bpm": 180,
+    "vocal_freq_min": 200,
+    "vocal_freq_max": 2000,
+    "min_onsets": 4
+  },
+  "midi": {
+    "tracks": 4,
+    "time_signature": [4, 4],
+    "drum_channel": 9,
+    "quantization_grid": 16
+  },
+  "harmonization": {
+    "bar_duration_factor": 4,
+    "chord_duration_factor": 0.8,
+    "bass_note_duration": 0.5,
+    "bass_second_beat": 2.0
+  },
+  "audio_rendering": {
+    "normalization_headroom": 0.1,
+    "output_format": "wav"
+  },
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8000,
+    "reload": true,
+    "workers": 1
+  }
+}
